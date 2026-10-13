@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>นักแก้ปัญหาตัวจิ๋ว</title>
+    
+    <!-- นำเข้าฟอนต์น่ารักๆ สำหรับเด็ก -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;600;700&family=Prompt:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- นำเข้า Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- นำเข้า Tone.js สำหรับสร้างเสียงประกอบ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+    <!-- การตั้งค่า Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'mali': ['Mali', 'cursive'],
+                        'prompt': ['Prompt', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            blue: '#4facfe',
+                            teal: '#00f2fe',
+                            yellow: '#f6d365',
+                            orange: '#fda085',
+                            pink: '#ff0844',
+                            green: '#43e97b',
+                        }
+                    },
+                    animation: {
+                        'bounce-slow': 'bounce 2s infinite',
+                        'wiggle': 'wiggle 1s ease-in-out infinite',
+                        'pop': 'pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+                    },
+                    keyframes: {
+                        wiggle: {
+                            '0%, 100%': { transform: 'rotate(-3deg)' },
+                            '50%': { transform: 'rotate(3deg)' },
+                        },
+                        pop: {
+                            '0%': { transform: 'scale(0.8)', opacity: '0' },
+                            '100%': { transform: 'scale(1)', opacity: '1' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+            background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+            touch-action: manipulation;
+            user-select: none;
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 480px;
+            height: 100vh;
+            max-height: 850px;
+            background-color: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @media (min-width: 480px) {
+            .game-container {
+                height: 90vh;
+                border-radius: 2rem;
+            }
+        }
+
+        .screen {
+            display: none;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            padding: 1.5rem;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: white;
+            overflow-y: auto;
+        }
+
+        .screen.active {
+            display: flex;
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .heading-mali {
+            font-family: 'Mali', cursive;
+        }
+
+        /* ปุ่มกดที่ดูนูนและเป็นมิตรกับเด็ก */
+        .btn-cute {
+            background: linear-gradient(to bottom, #f6d365 0%, #fda085 100%);
+            border: none;
+            border-bottom: 5px solid #e87b5a;
+            border-radius: 1.5rem;
+            color: white;
+            font-weight: bold;
+            font-size: 1.25rem;
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            transition: all 0.1s;
+            text-align: center;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+            font-family: 'Mali', cursive;
+        }
+
+        .btn-cute:active {
+            transform: translateY(3px);
+            border-bottom: 2px solid #e87b5a;
+            margin-bottom: 3px;
+        }
+
+        .btn-cute.green {
+            background: linear-gradient(to bottom, #43e97b 0%, #38f9d7 100%);
+            border-bottom-color: #2ebc60;
+        }
+        .btn-cute.blue {
+            background: linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%);
+            border-bottom-color: #009ce0;
+        }
+
+        /* ไอเทมสำหรับลาก/เรียงลำดับ */
+        .order-item {
+            background: white;
+            border: 3px solid #cbd5e1;
+            border-radius: 1rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: all 0.2s;
+        }
+        .order-item:hover {
+            border-color: #4facfe;
+            background-color: #f0f9ff;
+        }
+        .order-item:active {
+            transform: scale(0.98);
+        }
+
+        .slot {
+            background: #f1f5f9;
+            border: 3px dashed #cbd5e1;
+            border-radius: 1rem;
+            min-height: 4rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+            font-weight: bold;
+            transition: all 0.2s;
+            padding: 0.5rem;
+        }
+        .slot.filled {
+            border: 3px solid #4facfe;
+            background: #f0f9ff;
+            color: #333;
+            cursor: pointer;
+        }
+
+        /* ตัวเลือกแบบ Choice */
+        .choice-item {
+            background: white;
+            border: 3px solid #cbd5e1;
+            border-radius: 1.5rem;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 1.1rem;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: all 0.2s;
+        }
+        .choice-item.selected {
+            border-color: #f6d365;
+            background-color: #fffbeb;
+            transform: scale(1.02);
+            box-shadow: 0 6px 12px rgba(246, 211, 101, 0.3);
+        }
+
+        .star {
+            color: #d1d5db;
+            font-size: 2.5rem;
+            transition: color 0.3s, transform 0.5s;
+        }
+        .star.earned {
+            color: #fbbf24;
+            transform: scale(1.2) rotate(15deg);
+            text-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+        }
+
+        .character-bubble {
+            background: white;
+            border-radius: 1.5rem;
+            border-top-left-radius: 0;
+            padding: 1rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border: 2px solid #e2e8f0;
+            position: relative;
+        }
+        .character-bubble::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -10px;
+            border-top: 15px solid white;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+
+    <!-- Screen: Start -->
+    <div id="screen-start" class="screen active justify-center items-center text-center bg-gradient-to-b from-blue-100 to-white">
+        <div class="text-7xl mb-4 animate-bounce-slow">🦉</div>
+        <h1 class="heading-mali text-4xl font-bold text-blue-600 mb-2 leading-tight">นักแก้ปัญหา<br>ตัวจิ๋ว</h1>
+        <p class="text-gray-600 mb-8 font-medium">มาฝึกคิดเป็นขั้นตอนกันเถอะ!</p>
+        <button class="btn-cute w-48 text-xl" onclick="startGame()">เริ่มเล่นเลย!</button>
+    </div>
+
+    <!-- Screen: Intro/Instructions -->
+    <div id="screen-intro" class="screen bg-white">
+        <h2 class="heading-mali text-2xl font-bold text-center text-purple-600 mb-6">วิธีเล่นเกม</h2>
+        
+        <div class="flex gap-4 items-start mb-6">
+            <div class="text-5xl">🦉</div>
+            <div class="character-bubble flex-1">
+                <p class="mb-2">สวัสดีจ้ะ! ยินดีต้อนรับนักแก้ปัญหาตัวจิ๋ว</p>
+                <p>ในเกมนี้หนูจะต้องช่วยตัวละครแก้ปัญหาในชีวิตประจำวัน โดยการ <b>"เลือก"</b> หรือ <b>"เรียงลำดับขั้นตอน"</b> ให้ถูกต้องนะจ๊ะ</p>
+            </div>
+        </div>
+        
+        <div class="bg-blue-50 rounded-2xl p-4 mb-auto border-2 border-blue-100">
+            <ul class="list-disc pl-5 space-y-2 text-gray-700">
+                <li>อ่านสถานการณ์ปัญหาให้ดีๆ</li>
+                <li>คิดว่าต้องทำอะไร <b>ก่อน-หลัง</b></li>
+                <li>เรียงลำดับ หรือเลือกคำตอบที่เหมาะสมที่สุด</li>
+                <li>ถ้าตอบผิด ไม่เป็นไรนะ ลองใหม่ได้เลย!</li>
+            </ul>
+        </div>
+        
+        <button class="btn-cute green w-full mt-6" onclick="startLevel(0)">พร้อมแล้ว ไปกันเลย!</button>
+    </div>
+
+    <!-- Screen: Game Level -->
+    <div id="screen-game" class="screen bg-gray-50">
+        <!-- Header: Level Info & Progress -->
+        <div class="flex justify-between items-center mb-4 pb-2 border-b-2 border-gray-200">
+            <div class="heading-mali font-bold text-xl text-blue-600" id="level-title-display">ด่านที่ 1</div>
+            <div class="flex text-yellow-400 text-xl">
+                <span id="star-1">⭐</span><span id="star-2">⭐</span><span id="star-3">⭐</span>
+            </div>
+        </div>
+
+        <!-- Problem Description -->
+        <div class="bg-white p-4 rounded-2xl shadow-sm border-2 border-gray-100 mb-6 flex gap-3 items-center">
+            <div id="level-icon" class="text-4xl">🎒</div>
+            <p id="level-desc" class="text-gray-700 font-medium leading-relaxed"></p>
+        </div>
+
+        <!-- Interactive Area -->
+        <div id="interactive-area" class="flex-1 overflow-y-auto pb-4">
+            <!-- Content will be injected by JS based on level type -->
+        </div>
+
+        <!-- Action Button -->
+        <div class="mt-auto pt-2">
+            <button id="btn-check-answer" class="btn-cute blue w-full opacity-50 cursor-not-allowed" disabled onclick="checkAnswer()">ตรวจคำตอบ</button>
+        </div>
+    </div>
+
+    <!-- Screen: Feedback (Correct/Wrong) -->
+    <div id="screen-feedback" class="screen justify-center items-center text-center">
+        <div id="feedback-icon" class="text-8xl mb-4 animate-pop">🎉</div>
+        <h2 id="feedback-title" class="heading-mali text-3xl font-bold mb-4 text-green-500">ยอดเยี่ยมมาก!</h2>
+        
+        <div class="bg-gray-50 p-5 rounded-2xl border-2 border-gray-100 mb-8 w-full max-w-sm">
+            <p id="feedback-message" class="text-gray-700 text-lg mb-4"></p>
+            
+            <!-- Hint Box (only shows when wrong) -->
+            <div id="hint-box" class="hidden bg-yellow-100 border border-yellow-300 p-3 rounded-xl text-left flex gap-3 items-center">
+                <span class="text-2xl">💡</span>
+                <p id="hint-text" class="text-yellow-800 text-sm font-medium"></p>
+            </div>
+        </div>
+        
+        <button id="btn-next-action" class="btn-cute w-full max-w-sm" onclick="handleFeedbackAction()">ไปด่านต่อไป</button>
+    </div>
+
+    <!-- Screen: Summary (Game End) -->
+    <div id="screen-summary" class="screen justify-center items-center text-center bg-gradient-to-b from-blue-100 to-white">
+        <div class="text-6xl mb-2">🏆</div>
+        <h2 class="heading-mali text-3xl font-bold text-blue-600 mb-2">เก่งมากจ้า!</h2>
+        <p class="text-gray-600 mb-6">หนูคือนักแก้ปัญหาตัวจิ๋วตัวจริง!</p>
+        
+        <div class="bg-white p-6 rounded-3xl shadow-lg w-full max-w-xs mb-8">
+            <h3 class="font-bold text-gray-500 mb-2">คะแนนรวมของหนู</h3>
+            <div id="total-stars-display" class="flex justify-center gap-2 mb-4">
+                <!-- Stars will be injected -->
+            </div>
+            <p id="summary-text" class="text-lg font-medium text-blue-500"></p>
+        </div>
+        
+        <button class="btn-cute green w-full max-w-xs" onclick="resetGame()">เล่นใหม่อีกครั้ง</button>
+    </div>
+
+</div>
+
+<script>
+    // --- Game Data (Levels) ---
+    // มี 5 ด่าน ความยากเพิ่มขึ้น รูปแบบมีทั้งเรียงลำดับ (order) และเลือกตอบ (choice)
+    const levels = [
+        {
+            id: 1,
+            type: "order",
+            icon: "🎒",
+            title: "จัดกระเป๋าไปโรงเรียน",
+            desc: "น้องต้นต้องเตรียมกระเป๋าไปโรงเรียน ช่วยเรียงลำดับขั้นตอนที่ถูกต้องหน่อยนะ ขั้นตอนไหนควรทำก่อน-หลัง?",
+            items: ["ตรวจตารางเรียน", "หยิบหนังสือใส่กระเป๋า", "รูดซิปปิดกระเป๋า", "สะพายกระเป๋า"],
+            hint: "ต้องรู้ก่อนนะว่าวันนี้เรียนวิชาอะไรบ้าง ถึงจะหยิบหนังสือถูก",
+            explanation: "เยี่ยมมาก! การแก้ปัญหาที่ดีต้องเริ่มจากการหาข้อมูลก่อน ในที่นี้คือการ 'ตรวจตารางเรียน' เพื่อให้เตรียมของได้ถูกต้องนั่นเอง"
+        },
+        {
+            id: 2,
+            type: "choice",
+            icon: "✏️",
+            title: "ดินสอหายไปไหน!",
+            desc: "โต๊ะเรียนของน้องต้นรกมาก มีกระดาษและของเล่นเต็มไปหมด จนหาดินสอไม่เจอเลย นักแก้ปัญหาควรทำอย่างไรเป็นอันดับแรก?",
+            choices: [
+                "เก็บขยะทิ้งและจัดโต๊ะให้เป็นระเบียบ",
+                "ไปซื้อดินสอแท่งใหม่มาใช้เลย",
+                "เทของทุกอย่างบนโต๊ะลงบนพื้นเพื่อหา"
+            ],
+            correctChoiceIndex: 0,
+            hint: "ถ้าโต๊ะสะอาดและเป็นระเบียบ เราก็จะเห็นของง่ายขึ้นนะ ลองคิดดูว่าวิธีไหนดีที่สุด",
+            explanation: "ถูกต้องจ้า! การจัดระเบียบและการแยกแยะสิ่งของ จะช่วยให้เราค้นหาสิ่งของได้ง่าย และเป็นการแก้ปัญหาที่ต้นเหตุจ้ะ"
+        },
+        {
+            id: 3,
+            type: "order",
+            icon: "🍳",
+            title: "ทำไข่ดาวแสนอร่อย",
+            desc: "คุณแม่สอนน้องต้นทำไข่ดาว มาช่วยเรียงลำดับขั้นตอนการทอดไข่ดาวให้ปลอดภัยและถูกต้องกันเถอะ!",
+            items: ["ตั้งกระทะและใส่น้ำมัน", "เปิดเตาแก๊ส", "ตอกไข่ใส่กระทะตอนน้ำมันร้อน", "ตักไข่ใส่จานเมื่อสุกแล้ว"],
+            hint: "ต้องมีกระทะและน้ำมันก่อน ถึงจะเปิดไฟ และต้องรอน้ำมันร้อนก่อนใส่ไข่นะ",
+            explanation: "เก่งมาก! การทำอาหารต้องทำตามลำดับขั้นตอน หากทำสลับกัน เช่น ตอกไข่ก่อนใส่น้ำมัน ไข่ก็จะติดกระทะได้ การลำดับความสำคัญจึงสำคัญมาก"
+        },
+        {
+            id: 4,
+            type: "choice",
+            icon: "🥀",
+            title: "ต้นไม้เหี่ยวเฉา",
+            desc: "ต้นไม้ที่ระเบียงใบเหี่ยวเฉา และดินในกระถางแห้งแตกระแหงมาก นักแก้ปัญหาจะช่วยต้นไม้ต้นนี้อย่างไรดี จึงจะตรงจุดที่สุด?",
+            choices: [
+                "รดน้ำที่โคนต้นไม้ให้ชุ่มพอประมาณ",
+                "ยกกระถางไปตากแดดจัดๆ ทั้งวัน",
+                "เทปุ๋ยใส่ลงไปในกระถางเยอะๆ ทันที"
+            ],
+            correctChoiceIndex: 0,
+            hint: "สังเกตที่ 'ดินแห้งแตกระแหง' แปลว่าต้นไม้กำลังต้องการอะไรมากที่สุดนะ?",
+            explanation: "ใช่เลย! เมื่อเราวิเคราะห์ปัญหาพบว่า 'ดินแห้ง' การแก้ปัญหาที่ตรงจุดที่สุดคือการให้ 'น้ำ' การใส่ปุ๋ยเยอะเกินไปตอนดินแห้งอาจทำให้ต้นไม้ตายได้นะ"
+        },
+        {
+            id: 5,
+            type: "order",
+            icon: "📚",
+            title: "ยืมหนังสือที่ห้องสมุด",
+            desc: "ขั้นตอนเยอะไปหมดเลย ช่วยน้องต้นเรียงลำดับขั้นตอนการไปยืมหนังสือนิทานที่ห้องสมุดให้ถูกต้องหน่อยจ้า",
+            items: ["ดูหมวดหมู่หนังสือที่ป้ายบอกทาง", "เดินไปหาหนังสือที่ชั้นวาง", "นำหนังสือไปให้บรรณารักษ์เพื่อยืม", "นำหนังสือกลับบ้านไปอ่าน"],
+            hint: "ต้องรู้ก่อนว่าหนังสืออยู่หมวดไหน ถึงจะเดินไปถูกชั้นวางนะ",
+            explanation: "สุดยอดไปเลย! การทำงานเป็นขั้นตอนแบบนี้เรียกว่า 'อัลกอริทึม' (Algorithm) ช่วยให้เราทำงานได้สำเร็จและรวดเร็วขึ้น!"
+        }
+    ];
+
+    // --- Sound System (Tone.js) ---
+    // ใช้ Synth แบบง่ายๆ เพื่อไม่ให้หน่วงเครื่อง
+    let synth, polySynth;
+    let audioInitialized = false;
+
+    async function initAudio() {
+        if (audioInitialized) return;
+        await Tone.start();
+        
+        synth = new Tone.Synth({
+            oscillator: { type: "triangle" },
+            envelope: { attack: 0.05, decay: 0.1, sustain: 0.3, release: 1 }
+        }).toDestination();
+        synth.volume.value = -10;
+
+        polySynth = new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: "sine" },
+            envelope: { attack: 0.02, decay: 0.1, sustain: 0.2, release: 1.5 }
+        }).toDestination();
+        polySynth.volume.value = -15;
+
+        audioInitialized = true;
+    }
+
+    const soundManager = {
+        click: () => {
+            if(!audioInitialized) return;
+            synth.triggerAttackRelease("C5", "32n");
+        },
+        drop: () => {
+            if(!audioInitialized) return;
+            synth.triggerAttackRelease("G4", "16n");
+        },
+        correct: () => {
+            if(!audioInitialized) return;
+            const now = Tone.now();
+            polySynth.triggerAttackRelease(["C5", "E5"], "8n", now);
+            polySynth.triggerAttackRelease(["E5", "G5"], "8n", now + 0.15);
+            polySynth.triggerAttackRelease(["G5", "C6"], "4n", now + 0.3);
+        },
+        wrong: () => {
+            if(!audioInitialized) return;
+            const now = Tone.now();
+            synth.triggerAttackRelease("D3", "8n", now);
+            synth.triggerAttackRelease("C#3", "4n", now + 0.2);
+        },
+        win: () => {
+            if(!audioInitialized) return;
+            const now = Tone.now();
+            polySynth.triggerAttackRelease(["C4", "E4", "G4"], "8n", now);
+            polySynth.triggerAttackRelease(["F4", "A4", "C5"], "8n", now + 0.2);
+            polySynth.triggerAttackRelease(["G4", "B4", "D5"], "8n", now + 0.4);
+            polySynth.triggerAttackRelease(["C5", "E5", "G5", "C6"], "2n", now + 0.6);
+        }
+    };
+
+    // --- Game State ---
+    const gameState = {
+        currentLevelIndex: 0,
+        mistakesInCurrentLevel: 0,
+        scores: [], // เก็บจำนวนดาวของแต่ละด่าน (1-3)
+        
+        // สำหรับ Level Type: Order
+        shuffledOrderItems: [],
+        selectedOrderItems: [], // เก็บ index ของ item ที่เลือกมาใส่ slot
+        
+        // สำหรับ Level Type: Choice
+        selectedChoiceIndex: -1
+    };
+
+    // --- UI Navigation ---
+    function showScreen(screenId) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(screenId).classList.add('active');
+        
+        // เลื่อนจอขึ้นบนสุดทุกครั้งที่เปลี่ยนหน้า
+        document.getElementById(screenId).scrollTop = 0;
+    }
+
+    function startGame() {
+        initAudio();
+        soundManager.click();
+        showScreen('screen-intro');
+    }
+
+    function resetGame() {
+        soundManager.click();
+        gameState.currentLevelIndex = 0;
+        gameState.scores = [];
+        startLevel(0);
+    }
+
+    function startLevel(index) {
+        soundManager.click();
+        gameState.currentLevelIndex = index;
+        gameState.mistakesInCurrentLevel = 0;
+        
+        const level = levels[index];
+        
+        // Reset UI
+        document.getElementById('level-title-display').innerText = `ด่านที่ ${index + 1} / ${levels.length}`;
+        document.getElementById('level-icon').innerText = level.icon;
+        document.getElementById('level-desc').innerText = level.desc;
+        
+        // Reset Stars Display (Full stars at start of level)
+        updateLevelStars(3);
+
+        const interactiveArea = document.getElementById('interactive-area');
+        interactiveArea.innerHTML = ''; // Clear old content
+        document.getElementById('btn-check-answer').disabled = true;
+        document.getElementById('btn-check-answer').classList.add('opacity-50', 'cursor-not-allowed');
+
+        if (level.type === 'order') {
+            setupOrderLevel(level, interactiveArea);
+        } else if (level.type === 'choice') {
+            setupChoiceLevel(level, interactiveArea);
+        }
+
+        showScreen('screen-game');
+    }
+
+    function updateLevelStars(count) {
+        for(let i=1; i<=3; i++) {
+            const star = document.getElementById(`star-${i}`);
+            if(i <= count) {
+                star.style.filter = "grayscale(0%)";
+                star.style.opacity = "1";
+            } else {
+                star.style.filter = "grayscale(100%)";
+                star.style.opacity = "0.3";
+            }
+        }
+    }
+
+    // --- Order Level Logic ---
+    function setupOrderLevel(level, container) {
+        // Create an array of objects with original index to check answer later
+        const itemsWithIndex = level.items.map((text, idx) => ({ text, originalIdx: idx }));
+        
+        // Shuffle array (Fisher-Yates)
+        gameState.shuffledOrderItems = [...itemsWithIndex];
+        for (let i = gameState.shuffledOrderItems.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [gameState.shuffledOrderItems[i], gameState.shuffledOrderItems[j]] = [gameState.shuffledOrderItems[j], gameState.shuffledOrderItems[i]];
+        }
+        
+        gameState.selectedOrderItems = new Array(level.items.length).fill(null);
+
+        // Container for Slots (Top)
+        const slotsContainer = document.createElement('div');
+        slotsContainer.className = 'mb-6';
+        slotsContainer.innerHTML = '<h3 class="text-sm font-bold text-gray-500 mb-2">แตะลำดับที่ต้องการเพื่อจัดเรียง:</h3>';
+        
+        const slotsWrapper = document.createElement('div');
+        slotsWrapper.id = 'slots-wrapper';
+        slotsContainer.appendChild(slotsWrapper);
+        container.appendChild(slotsContainer);
+
+        // Container for Options (Bottom)
+        const optionsContainer = document.createElement('div');
+        optionsContainer.id = 'options-wrapper';
+        container.appendChild(optionsContainer);
+
+        renderOrderUI();
+    }
+
+    function renderOrderUI() {
+        const slotsWrapper = document.getElementById('slots-wrapper');
+        const optionsWrapper = document.getElementById('options-wrapper');
+        slotsWrapper.innerHTML = '';
+        optionsWrapper.innerHTML = '';
+
+        let allFilled = true;
+
+        // Render Slots
+        gameState.selectedOrderItems.forEach((itemObj, index) => {
+            const slot = document.createElement('div');
+            if (itemObj) {
+                slot.className = 'slot filled animate-pop';
+                slot.innerHTML = `<span class="mr-2 text-blue-500 font-bold">${index + 1}.</span> ${itemObj.text}`;
+                slot.onclick = () => removeOrderItem(index);
+            } else {
+                slot.className = 'slot';
+                slot.innerHTML = `ขั้นตอนที่ ${index + 1}`;
+                allFilled = false;
+            }
+            slotsWrapper.appendChild(slot);
+        });
+
+        // Render Options (pool)
+        gameState.shuffledOrderItems.forEach((itemObj, index) => {
+            // Check if this item is already selected
+            const isSelected = gameState.selectedOrderItems.some(selected => selected && selected.originalIdx === itemObj.originalIdx);
+            
+            if (!isSelected) {
+                const btn = document.createElement('div');
+                btn.className = 'order-item';
+                btn.innerHTML = itemObj.text;
+                btn.onclick = () => selectOrderItem(itemObj);
+                optionsWrapper.appendChild(btn);
+            }
+        });
+
+        // Enable/Disable check button
+        const checkBtn = document.getElementById('btn-check-answer');
+        if (allFilled) {
+            checkBtn.disabled = false;
+            checkBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        } else {
+            checkBtn.disabled = true;
+            checkBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+    }
+
+    function selectOrderItem(itemObj) {
+        soundManager.click();
+        // Find first empty slot
+        const emptyIndex = gameState.selectedOrderItems.findIndex(i => i === null);
+        if (emptyIndex !== -1) {
+            gameState.selectedOrderItems[emptyIndex] = itemObj;
+            renderOrderUI();
+        }
+    }
+
+    function removeOrderItem(slotIndex) {
+        soundManager.drop();
+        gameState.selectedOrderItems[slotIndex] = null;
+        renderOrderUI();
+    }
+
+    // --- Choice Level Logic ---
+    function setupChoiceLevel(level, container) {
+        gameState.selectedChoiceIndex = -1;
+        
+        container.innerHTML = '<h3 class="text-sm font-bold text-gray-500 mb-3">เลือกคำตอบที่ถูกต้องที่สุด:</h3>';
+        
+        level.choices.forEach((choiceText, index) => {
+            const btn = document.createElement('div');
+            btn.className = 'choice-item';
+            btn.id = `choice-${index}`;
+            btn.innerHTML = choiceText;
+            btn.onclick = () => selectChoice(index);
+            container.appendChild(btn);
+        });
+    }
+
+    function selectChoice(index) {
+        soundManager.click();
+        gameState.selectedChoiceIndex = index;
+        
+        // Update UI styling
+        document.querySelectorAll('.choice-item').forEach(el => el.classList.remove('selected'));
+        document.getElementById(`choice-${index}`).classList.add('selected');
+        
+        // Enable check button
+        const checkBtn = document.getElementById('btn-check-answer');
+        checkBtn.disabled = false;
+        checkBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+
+    // --- Checking Logic ---
+    function checkAnswer() {
+        const level = levels[gameState.currentLevelIndex];
+        let isCorrect = false;
+
+        if (level.type === 'order') {
+            // Check if selected originalIdx array is exactly [0, 1, 2, 3]
+            isCorrect = gameState.selectedOrderItems.every((item, index) => item && item.originalIdx === index);
+        } else if (level.type === 'choice') {
+            isCorrect = (gameState.selectedChoiceIndex === level.correctChoiceIndex);
+        }
+
+        if (isCorrect) {
+            handleCorrectAnswer(level);
+        } else {
+            handleWrongAnswer(level);
+        }
+    }
+
+    function calculateStars(mistakes) {
+        if (mistakes === 0) return 3;
+        if (mistakes === 1) return 2;
+        return 1;
+    }
+
+    function handleCorrectAnswer(level) {
+        soundManager.correct();
+        const starsEarned = calculateStars(gameState.mistakesInCurrentLevel);
+        gameState.scores.push(starsEarned);
+        
+        // Setup Feedback Screen for Correct
+        document.getElementById('feedback-icon').innerText = "🎉";
+        document.getElementById('feedback-title').innerText = "เยี่ยมมาก!";
+        document.getElementById('feedback-title').className = "heading-mali text-3xl font-bold mb-4 text-green-500";
+        document.getElementById('feedback-message').innerHTML = `<b>คำอธิบาย:</b><br>${level.explanation}`;
+        document.getElementById('hint-box').classList.add('hidden');
+        
+        const nextBtn = document.getElementById('btn-next-action');
+        nextBtn.innerText = (gameState.currentLevelIndex === levels.length - 1) ? "ดูสรุปคะแนน" : "ไปด่านต่อไป";
+        nextBtn.className = "btn-cute green w-full max-w-sm";
+        nextBtn.dataset.action = "next";
+
+        showScreen('screen-feedback');
+    }
+
+    function handleWrongAnswer(level) {
+        soundManager.wrong();
+        gameState.mistakesInCurrentLevel++;
+        updateLevelStars(calculateStars(gameState.mistakesInCurrentLevel));
+        
+        // Setup Feedback Screen for Wrong
+        document.getElementById('feedback-icon').innerText = "🤔";
+        document.getElementById('feedback-title').innerText = "ยังไม่ถูกต้องจ้ะ";
+        document.getElementById('feedback-title').className = "heading-mali text-3xl font-bold mb-4 text-orange-500";
+        document.getElementById('feedback-message').innerText = "ลองคิดใหม่อีกทีนะ นักแก้ปัญหาทำได้อยู่แล้ว!";
+        
+        // Show Hint
+        const hintBox = document.getElementById('hint-box');
+        hintBox.classList.remove('hidden');
+        document.getElementById('hint-text').innerText = level.hint;
+        
+        const nextBtn = document.getElementById('btn-next-action');
+        nextBtn.innerText = "ลองทำใหม่";
+        nextBtn.className = "btn-cute w-full max-w-sm"; // orange/yellow style
+        nextBtn.dataset.action = "retry";
+
+        showScreen('screen-feedback');
+    }
+
+    function handleFeedbackAction() {
+        const action = document.getElementById('btn-next-action').dataset.action;
+        if (action === 'retry') {
+            soundManager.click();
+            // รีเซ็ตตัวเลือกในหน้าปัจจุบัน
+            if (levels[gameState.currentLevelIndex].type === 'order') {
+                gameState.selectedOrderItems.fill(null);
+                renderOrderUI();
+            } else {
+                document.querySelectorAll('.choice-item').forEach(el => el.classList.remove('selected'));
+                gameState.selectedChoiceIndex = -1;
+                const checkBtn = document.getElementById('btn-check-answer');
+                checkBtn.disabled = true;
+                checkBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+            showScreen('screen-game');
+        } else if (action === 'next') {
+            if (gameState.currentLevelIndex < levels.length - 1) {
+                startLevel(gameState.currentLevelIndex + 1);
+            } else {
+                showSummaryScreen();
+            }
+        }
+    }
+
+    function showSummaryScreen() {
+        soundManager.win();
+        
+        const totalStars = gameState.scores.reduce((a, b) => a + b, 0);
+        const maxStars = levels.length * 3;
+        
+        // Create stars display
+        const starsContainer = document.getElementById('total-stars-display');
+        starsContainer.innerHTML = '';
+        
+        // แสดงดาวแบบย่อ ใช้ตัวเลขเพื่อให้ดูง่ายสำหรับเด็ก
+        starsContainer.innerHTML = `
+            <div class="flex items-center justify-center gap-2 text-4xl">
+                <span class="text-yellow-400">⭐</span> 
+                <span class="text-gray-700 font-bold text-2xl"> x ${totalStars}</span>
+            </div>
+        `;
+
+        let summaryMsg = "";
+        if (totalStars === maxStars) {
+            summaryMsg = "เพอร์เฟกต์! หนูเก่งมากๆ เลยจ้ะ";
+        } else if (totalStars >= maxStars * 0.7) {
+            summaryMsg = "เก่งมาก! หนูมีทักษะแก้ปัญหาที่ดีเยี่ยม";
+        } else {
+            summaryMsg = "ทำได้ดีจ้ะ! ฝึกบ่อยๆ หนูจะเก่งขึ้นอีกแน่นอน";
+        }
+        document.getElementById('summary-text').innerText = summaryMsg;
+
+        showScreen('screen-summary');
+    }
+
+</script>
+</body>
+</html>
